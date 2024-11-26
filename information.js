@@ -1,42 +1,42 @@
-const like = async(req,res)=>{
-     try {
-     const postId = req.params.postId;
-     const userId = req.params.postId;
-      console.log("req.params :",req.params)
-      console.log("postid :",postId)
-      console.log("userid :",userId)  
+const updateCart = async (req, res) => {
+  try {
+      const { productId, quantity } = req.body; // Get productId and quantity from req.body
+      console.log("req.body: ", req.body);
 
-      const postExist = await Post.findById(postId)
-      const userExist = await User.findById(userId)
+      // Find the cart
+      const cart = await Cart.findOne(); // Replace with user-specific query if needed
+      console.log("cart:", cart);
 
-      if(!postExist){
-        res.status(404).json({message : "Post not found"})
+      if (!cart) {
+          return res.status(404).json({ message: "Cart not found." });
       }
 
-      if(!userExist){
-        res.status(404).json({message: "User not found"})
+      // Check if the product exists in the cart
+      const productIndex = cart.product.findIndex(
+          (item) => item.productId.toString() === productId
+      );
+
+      if (productIndex !== -1) {
+          // Update quantity if the product exists
+          cart.product[productIndex].quantity += Number(quantity);
+      } else {
+          // Add a new product to the cart
+          cart.product.push({
+              productId,
+              quantity: Number(quantity),
+              price: 0, // Add price logic if available
+          });
       }
 
-      if(postExist.likedBy.includes(userId)){
-        res.status(207).json({message : "Post Already Liked"})
-      }
+      // Save the updated cart
+      const updatedCart = await cart.save();
 
-      if(postExist.dislikedBy.includes(userId)){
-        postExist.dislikedBy.pull(userId);
-        postExist.dislike -= 1;
-      }
-
-      postExist.likedBy.push(userId)
-      postExist.like += 1;
-
-      const savedLikes = await postExist.save()
-      res.status(200).json(savedLikes);
-      console.log("savedLikes: ", savedLikes)
-      
-     } 
-     catch (error) {
-      console.log("Internal server Error", error);
-      res.status(500).json({message : "Internal Server error"})
-       
-     }
-}
+      res.status(200).json({
+          message: "Cart item updated successfully",
+          updatedCart,
+      });
+  } catch (error) {
+      console.error("Internal Server Error", error);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+};
